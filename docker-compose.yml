@@ -1,0 +1,86 @@
+version: '3.8'
+
+networks:
+  sql_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  ag_certs:
+
+services:
+  sql1:
+    build: .
+    container_name: sql1
+    hostname: sql1
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=yourStrong(!)Password
+    networks:
+      sql_network:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q \"SQL Server is now ready for client connections\" /var/opt/mssql/log/errorlog"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
+
+  sql2:
+    build: .
+    container_name: sql2
+    hostname: sql2
+    ports:
+      - "1434:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=yourStrong(!)Password
+    networks:
+      sql_network:
+        ipv4_address: 172.20.0.11
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q \"SQL Server is now ready for client connections\" /var/opt/mssql/log/errorlog"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
+
+  sql3:
+    build: .
+    container_name: sql3
+    hostname: sql3
+    ports:
+      - "1435:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=yourStrong(!)Password
+    networks:
+      sql_network:
+        ipv4_address: 172.20.0.12
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q \"SQL Server is now ready for client connections\" /var/opt/mssql/log/errorlog"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
+
+  sql-setup:
+    image: mcr.microsoft.com/mssql-tools
+    container_name: sql-setup
+    depends_on:
+      sql1:
+        condition: service_healthy
+      sql2:
+        condition: service_healthy
+      sql3:
+        condition: service_healthy
+    volumes:
+      - ./sql:/sql
+      - ag_certs:/sql/certs
+    networks:
+      - sql_network
+    command: ["tail", "-f", "/dev/null"]
